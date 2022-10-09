@@ -1,5 +1,5 @@
 # ftx-async
-Unofficial Rust implementation of a fully asynchronous client for the FTX crypto exchange 
+Unofficial Rust implementation of an asynchronous Websocket and REST client for the FTX crypto exchange 
 
 ![ci](https://github.com/IanMichaelAsh/ftx-async/actions/workflows/ci.yml/badge.svg)
 

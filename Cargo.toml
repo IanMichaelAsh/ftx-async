@@ -10,7 +10,9 @@ async-trait = {version = "0.1" }
 const_format = { version = "0.2"}
 futures = {version = "0.3"}
 futures-util = { version = "0.3" }
+hex = { version = "0.4" }
 hmac = { version = "0.12" }
+num-traits = {version = "0.2"}
 sha2 = {version = "0.10" }
 tracing = {version = "0.1"}
 tracing-subscriber = {version = "0.3"}

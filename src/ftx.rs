@@ -1149,14 +1149,14 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_get_markets() {
-        let f = RestApi::new();
-        let s = tokio_test::block_on(f.get_markets());
-        if let Ok(m) = s {
-            assert!(m.len() > 0);
-        }
-    }
+    // #[test]
+    // fn test_get_markets() {
+    //     let f = RestApi::new();
+    //     let s = tokio_test::block_on(f.get_markets());
+    //     if let Ok(m) = s {
+    //         assert!(m.len() > 0);
+    //     }
+    // }
 
     // #[test]
     // fn test_cancel_order() {

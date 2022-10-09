@@ -30,12 +30,6 @@ const URL_ORDERS: &str = concatcp!(FTX_REST_URL, URI_ORDERS);
 const URI_MARKETS: &str = "/api/markets";
 const URL_MARKETS: &str = concatcp!(FTX_REST_URL, URI_MARKETS);
 
-pub const READONLY_API_KEY: &str = "HZCG12uY4eXL8pONseG_rqcx7zKi4aleJM6XYhq4";
-pub const READONLY_API_SECRET: &str = "CxnOy1gX7T5mgkVKV_mUCaJ71P_e1lBF5ueumhw1";
-
-pub const WRITE_API_KEY: &str = "hv3Sv-b6VEXUgt65swha7WpMb_2hxY37aOTDv-BV";
-pub const WRITE_API_SECRET: &str = "iayGDV5kisEtjg3L87JQjRGnx0EnnLNx_RqMuK30";
-
 pub type FtxOrderId = u64;
 pub type FtxPrice = f32;
 pub type FtxSize = f32;
@@ -468,11 +462,13 @@ async fn start_websocket(ws_url: &str) -> (WsWriter, WsReader) {
 async fn authenticate(
     ws_controller: &Arc<Mutex<WebSocketController>>,
     writer: &mut WsWriter,
+    api_key : &str,
+    api_secret : &str
 ) -> Result<(), ()> {
     ws_controller
         .lock()
         .await
-        .authenticate(writer)
+        .authenticate(writer, api_key, api_secret)
         .await
         .map_err(|e| {
             error!("Authentication error: {:?}", e);
@@ -494,17 +490,19 @@ async fn ftx_data_worker(
     broadcast_channel: broadcast::Sender<UpdateMessage>,
     ws_controller: Arc<Mutex<WebSocketController>>,
     ws_url: &str,
+    api_key : &str,
+    api_secret : &str
 ) {
     info!("Ftx data worker started.");
     let mut ping_interval = time::interval(time::Duration::from_secs(15));
     let mut init_websocket = false;
     let (mut ws_writer, mut ws_reader) = start_websocket(ws_url).await;
-    let _ = authenticate(&ws_controller, &mut ws_writer).await;
+    let _ = authenticate(&ws_controller, &mut ws_writer, api_key, api_secret).await;
     while !ws_controller.lock().await.should_terminate {
         if init_websocket {
             info!("Reinitializing web socket");
             (ws_writer, ws_reader) = start_websocket(ws_url).await;
-            if authenticate(&ws_controller, &mut ws_writer).await.is_ok() {
+            if authenticate(&ws_controller, &mut ws_writer, api_key, api_secret).await.is_ok() {
                 ws_controller.lock().await.resubscribe(&mut ws_writer).await;
                 init_websocket = false;
             }
@@ -591,15 +589,19 @@ async fn ftx_data_worker(
 
 pub struct RestApi {
     client: reqwest::Client,
+    api_key: String,
+    api_secret : String
 }
 
 impl RestApi {
-    pub fn new() -> RestApi {
+    pub fn new(api_key : &str, api_secret : &str) -> RestApi {
         Self {
             client: reqwest::Client::builder()
                 .tcp_nodelay(true)
                 .build()
                 .unwrap(),
+            api_key: String::from(api_key),
+            api_secret: String::from(api_secret)
         }
     }
 
@@ -610,10 +612,10 @@ impl RestApi {
         endpoint: &str,
     ) -> impl std::future::Future<Output = Result<Response, reqwest::Error>> {
         let (_, ts) = get_timestamp();
-        let signature = build_signature(WRITE_API_SECRET, &ts, "GET", endpoint, None);
+        let signature = build_signature(&self.api_secret, &ts, "GET", endpoint, None);
         self.client
             .get(target_url)
-            .header("FTX-KEY", WRITE_API_KEY)
+            .header("FTX-KEY", &self.api_key)
             .header("FTX-SIGN", signature)
             .header("FTX-TS", ts)
             .send()
@@ -703,12 +705,12 @@ impl RestApi {
         let target_url = URL_ORDERS;
         let payload = serde_json::to_string(&body).unwrap();
         let (_, ts) = get_timestamp();
-        let signature = build_signature(WRITE_API_SECRET, &ts, "POST", endpoint, Some(&payload));
+        let signature = build_signature(&self.api_key, &ts, "POST", endpoint, Some(&payload));
 
         let res = self
             .client
             .post(target_url)
-            .header("FTX-KEY", WRITE_API_KEY)
+            .header("FTX-KEY", &self.api_key)
             .header("FTX-SIGN", signature)
             .header("FTX-TS", ts)
             .body(payload)
@@ -741,12 +743,12 @@ impl RestApi {
         target_url.push_str("/");
         target_url.push_str(&order_id.to_string());
         let (_, ts) = get_timestamp();
-        let signature = build_signature(WRITE_API_SECRET, &ts, "DELETE", &endpoint, None);
+        let signature = build_signature(&self.api_secret, &ts, "DELETE", &endpoint, None);
 
         let res = self
             .client
             .delete(target_url)
-            .header("FTX-KEY", WRITE_API_KEY)
+            .header("FTX-KEY", &self.api_key)
             .header("FTX-SIGN", signature)
             .header("FTX-TS", ts)
             .send()
@@ -892,13 +894,13 @@ impl WebSocketController {
     }
 
     /// Authenticate the websocket to enable access to private channels.
-    pub async fn authenticate(&self, writer: &mut WsWriter) -> Result<(), ()> {
+    pub async fn authenticate(&self, writer: &mut WsWriter, api_key : &str, api_secret : &str) -> Result<(), ()> {
         let (ts, ts_s) = get_timestamp();
         let payload = FtxLogin {
             op: String::from("login"),
             args: FtxLoginSignature {
-                key: String::from(WRITE_API_KEY),
-                sign: build_ws_signature(&ts_s, WRITE_API_SECRET),
+                key: String::from(api_key),
+                sign: build_ws_signature(&ts_s, api_secret),
                 time: ts,
             },
         };
@@ -1019,7 +1021,7 @@ impl FtxManager {
         self.ws_controller.lock().await.should_terminate = true;
     }
 
-    pub async fn new(ticker: &str) -> Self {
+    pub async fn new(api_key: &str, api_secret: &str, ticker: &str) -> Self {
         // Create the broadcast channel for sending updates to interested workers.
         let (tx, mut _rx) = broadcast::channel::<UpdateMessage>(512);
 
@@ -1028,15 +1030,17 @@ impl FtxManager {
             market: String::from(ticker),
             order_channel: tx,
             ws_controller: Arc::new(Mutex::new(WebSocketController::new())),
-            rest_api: RestApi::new(),
+            rest_api: RestApi::new(api_key, api_secret),
         };
         ftx_mgr.ws_controller.lock().await.add_market(ticker);
 
         // Create a worker to listen to the FTX websocket and process messages
         let broadcast_channel = ftx_mgr.order_channel.clone();
         let controller = ftx_mgr.ws_controller.clone();
+        let key = String::from(api_key);
+        let secret =   String::from(api_secret);
         tokio::spawn(async move {
-            ftx_data_worker(broadcast_channel, controller, &FTX_WEBSOCKET_URL).await
+            ftx_data_worker(broadcast_channel, controller, &FTX_WEBSOCKET_URL, &key, &secret).await
         });
         ftx_mgr
     }

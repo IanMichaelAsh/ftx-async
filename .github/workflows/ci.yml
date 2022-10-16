@@ -8,6 +8,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  FTX_API_KEY: -LN75anxaQPvbD_p_P8p6wDqbAx39j6ON2zUoKZk
+  FTX_SECRET: XUgWdstqn0cMsxkxheGlhOdajIHea-7tChABM8Xr
 
 jobs:
   build:

@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{error, warn};
 
 use crate::interface::{
-    AccountInfo, AccountInfoResponse, FtxMarket, FtxOrderId, FtxPrice, FtxSize, OrderResponse,
+    AccountInfo, AccountInfoResponse, Market, FtxOrderId, FtxPrice, FtxSize, OrderResponse,
     PlaceOrder, PlaceOrderResponse, RestResponseMarketList, RestResponseOrderList, WalletBalances
 };
 
@@ -125,7 +125,7 @@ impl RestApi {
     }
 
     /// Returns a list of all markets on the exchange.
-    pub async fn get_markets(&self) -> Result<Vec<FtxMarket>, ()> {
+    pub async fn get_markets(&self) -> Result<Vec<Market>, ()> {
         let res = self.send_get_request(URL_MARKETS, URI_MARKETS).await;
 
         if let Ok(r) = res {

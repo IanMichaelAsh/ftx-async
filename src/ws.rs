@@ -458,7 +458,7 @@ impl WebSocketController {
             .await
     }
 }
-pub struct FtxManager {
+pub struct WebsocketManager {
     // into_channel_to_websocket: mpsc::Sender<tokio_tungstenite::tungstenite::Message>,
     market: String,
     order_channel: broadcast::Sender<UpdateMessage>,
@@ -466,7 +466,7 @@ pub struct FtxManager {
     rest_api: RestApi,
 }
 
-impl FtxManager {
+impl WebsocketManager {
     /// Returns an interface to the exchange REST API
     pub fn api(&self) -> &RestApi {
         &self.rest_api

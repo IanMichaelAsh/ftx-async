@@ -1,1 +1,3 @@
-pub mod ftx;
+pub mod ws;
+pub mod rest;
+pub mod interface;

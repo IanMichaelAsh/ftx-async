@@ -1,13 +1,10 @@
-use const_format::concatcp;
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
 use hmac::{Hmac, Mac};
 use num_traits::Zero;
-use reqwest::Response;
-use rustc_hash::FxHashMap;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize};
 use sha2::Sha256;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -16,23 +13,15 @@ use tokio::time;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use tracing::{error, info, warn};
 
+use crate::interface::{
+    FtxLogin, FtxLoginSignature, FtxMessage, FtxOrderId, FtxPrice, FtxSize, OrderBookUpdate,
+    PartialData, UpdateData,
+};
+use crate::rest::RestApi;
+
 const FTX_WEBSOCKET_URL: &str = "wss://ftx.com/ws/";
-const FTX_REST_URL: &str = "https://ftx.com";
 
 const PING_MSG: &str = r#"{"op":"ping"}"#;
-
-const URI_GET_ACCOUNT_INFO: &str = "/api/account";
-const URL_GET_ACCOUNT_INFO: &str = concatcp!(FTX_REST_URL, URI_GET_ACCOUNT_INFO);
-const URI_GET_WALLET: &str = "/api/wallet/balances";
-const URL_GET_WALLET: &str = concatcp!(FTX_REST_URL, URI_GET_WALLET);
-const URI_ORDERS: &str = "/api/orders";
-const URL_ORDERS: &str = concatcp!(FTX_REST_URL, URI_ORDERS);
-const URI_MARKETS: &str = "/api/markets";
-const URL_MARKETS: &str = concatcp!(FTX_REST_URL, URI_MARKETS);
-
-pub type FtxOrderId = u64;
-pub type FtxPrice = f32;
-pub type FtxSize = f32;
 
 type WsWriter = SplitSink<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
@@ -70,13 +59,12 @@ pub enum UpdateMessage {
         last_trade: Option<FtxPrice>,
     },
     Trade {
-        price : FtxPrice,
-        size : FtxSize,
-        timestamp : i64,
-        side : SideOfBook
-    }
+        price: FtxPrice,
+        size: FtxSize,
+        timestamp: i64,
+        side: SideOfBook,
+    },
 }
-
 
 #[derive(Debug, Clone)]
 pub enum FailureReason {
@@ -85,102 +73,6 @@ pub enum FailureReason {
     OrderCancelled,
 }
 
-#[derive(Serialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct FtxLoginSignature {
-    key: String,
-    sign: String,
-    time: u128,
-}
-
-#[derive(Serialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct FtxLogin {
-    args: FtxLoginSignature,
-    op: String,
-}
-
-#[allow(dead_code)]
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct FtxFuture {
-    pub name: String,
-    pub underlying: String,
-    pub description: String,
-    #[serde(rename = "type")]
-    pub future_type: String,
-    pub expiry: Option<String>,
-    pub perpetual: bool,
-    pub expired: bool,
-    pub enabled: bool,
-    pub post_only: bool,
-}
-
-#[allow(dead_code)]
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct FtxMarket {
-    name: String,
-    enabled: bool,
-    price_increment: FtxPrice,
-    size_increment: FtxSize,
-    #[serde(rename = "type")]
-    market_type: String,
-    base_currency: Option<String>,
-    quote_currency: Option<String>,
-    underlying: Option<String>,
-    restricted: bool,
-    future: Option<FtxFuture>,
-}
-
-#[allow(dead_code)]
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct LimitOrder {
-    id: u64,
-    client_id: Option<String>,
-    market: String,
-    #[serde(rename = "type")]
-    order_type: String,
-    side: String,
-    size: FtxSize,
-    price: FtxPrice,
-    reduce_only: bool,
-    ioc: bool,
-    post_only: bool,
-    status: String,
-    filled_size: FtxSize,
-    remaining_size: FtxSize,
-    avg_fill_price: Option<FtxPrice>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Markets {
-    pub data: FxHashMap<String, FtxMarket>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-#[serde(tag = "channel", content = "data")]
-pub enum PartialData {
-    Markets(Markets),
-    Orderbook(OrderBookUpdate),
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Ticker {
-    pub bid: Option<FtxPrice>,
-    pub ask: Option<FtxPrice>,
-    pub bid_size: FtxSize,
-    pub ask_size: FtxSize,
-    pub last: Option<FtxPrice>,
-    pub time: f64,
-}
-
-type FtxPriceLadder = Vec<(FtxPrice, FtxSize)>;
-
 // fn to_lob_update(prices: &FtxPriceLadder) -> lob::OrderBookUpdates {
 //     let mut updates = lob::OrderBookUpdates::with_capacity(prices.len());
 //     for p in prices.iter() {
@@ -188,68 +80,6 @@ type FtxPriceLadder = Vec<(FtxPrice, FtxSize)>;
 //     }
 //     updates
 // }
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct OrderBookUpdate {
-    pub time: f64,
-    pub checksum: u32,
-    pub bids: FtxPriceLadder,
-    pub asks: FtxPriceLadder,
-}
-
-#[allow(dead_code)]
-#[derive(Deserialize, Debug)]
-pub struct Trades<'a> {
-    id: u32,
-    price: FtxPrice,
-    size: FtxSize,
-    side: &'a str,
-    liquidation: bool,
-    time: String,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-#[serde(tag = "channel", content = "data")]
-pub enum UpdateData<'a> {
-    Ticker(Ticker),
-    Orderbook(OrderBookUpdate),
-    #[serde(borrow)]
-    Trades(Vec<Trades<'a>>),
-    Orders(LimitOrder),
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-#[serde(tag = "type")]
-pub enum FtxMessage<'a> {
-    Pong {},
-    Subscribed {
-        channel: String,
-    },
-    Partial {
-        market: Option<String>,
-        #[serde(flatten)]
-        data: PartialData,
-    },
-    Update {
-        #[serde(flatten)]
-        #[serde(borrow)]
-        data: UpdateData<'a>,
-    },
-    Error {
-        code: i32,
-        msg: String,
-    },
-    Info {
-        code: i32,
-        msg: String,
-    },
-    Unsubscribed {
-        channel: String,
-        market: String,
-    },
-}
 
 const CMD_SUBSCRIBE: &str = "subscribe";
 const CMD_UNSUBSCRIBE: &str = "unsubscribe";
@@ -262,145 +92,11 @@ struct SubscriptionMgmt<'a> {
     op: &'a str,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct FuturePosition {
-    pub cost: FtxPrice,
-    pub entry_price: Option<FtxPrice>,
-    pub future: String,
-    pub initial_margin_requirement: FtxPrice,
-    pub long_order_size: FtxSize,
-    pub maintenance_margin_requirement: FtxPrice, // Unclear if this should be FtxVolume
-    /// Size of position. Positive if long, negative if short.
-    pub net_size: FtxPrice,
-    pub open_size: FtxPrice,
-    pub realized_pnl: FtxPrice,
-    pub unrealized_pnl: FtxPrice,
-    pub short_order_size: FtxSize,
-    pub side: String,
-    /// Absolute value of  net_size
-    pub size: FtxPrice,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct AccountInfo {
-    pub backstop_provider: bool,
-    pub collateral: FtxPrice,
-    pub free_collateral: FtxPrice,
-    pub initial_margin_requirement: FtxPrice,
-    pub liquidating: bool,
-    pub maintenance_margin_requirement: FtxPrice,
-    pub maker_fee: FtxPrice,
-    pub margin_fraction: Option<FtxPrice>,
-    pub open_margin_fraction: Option<FtxPrice>,
-    pub taker_fee: FtxPrice,
-    pub total_account_value: FtxPrice,
-    pub total_position_size: FtxSize,
-    pub username: String,
-    pub leverage: FtxPrice,
-    pub positions: Vec<FuturePosition>,
-}
-
-impl AccountInfo {
-    pub fn get_position_by_name(&self, future_name: &str) -> Option<&FuturePosition> {
-        self.positions.iter().find(|&x| x.future == future_name)
-    }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct AccountInfoResponse {
-    pub success: bool,
-    pub result: Option<AccountInfo>,
-    pub error: Option<String>,
-    pub error_code: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct BalanceEntry {
-    pub coin: String,
-    pub free: FtxPrice,
-    pub spot_borrow: FtxPrice,
-    pub total: FtxPrice,
-    pub usd_value: FtxPrice,
-    pub available_without_borrow: FtxPrice,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct WalletBalances {
-    pub success: bool,
-    pub result: Vec<BalanceEntry>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct RestResponseOrderList {
-    pub success: bool,
-    pub result: Vec<LimitOrder>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct RestResponseMarketList {
-    pub success: bool,
-    pub result: Vec<FtxMarket>,
-}
-
-#[derive(Serialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct PlaceOrder<'a> {
-    market: &'a str,
-    side: &'a str,
-    price: FtxPrice,
-    #[serde(rename = "type")]
-    order_type: &'a str,
-    size: FtxSize,
-    reduce_only: bool,
-    ioc: bool,
-    post_only: bool,
-    client_id: Option<&'a str>,
-}
-
-#[allow(dead_code)]
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct OrderStatus {
-    created_at: String,
-    filled_size: FtxSize,
-    future: Option<String>,
-    id: u64,
-    market: String,
-    price: FtxPrice,
-    remaining_size: FtxSize,
-    side: String,
-    size: FtxSize,
-    status: String,
-    #[serde(rename = "type")]
-    order_type: String,
-    reduce_only: bool,
-    ioc: bool,
-    post_only: bool,
-    client_id: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct PlaceOrderResponse {
-    success: bool,
-    result: Option<OrderStatus>,
-    error: Option<String>,
-}
-
-#[allow(dead_code)]
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct OrderResponse {
-    success: bool,
-    result: String,
-}
+// impl AccountInfo {
+//     pub fn get_position_by_name(&self, future_name: &str) -> Option<&FuturePosition> {
+//         self.positions.iter().find(|&x| x.future == future_name)
+//     }
+// }
 
 /// Returns a signature for the authentication payload to enable private websocket channels.
 fn build_ws_signature(timestamp: &str, api_secret: &str) -> String {
@@ -410,46 +106,6 @@ fn build_ws_signature(timestamp: &str, api_secret: &str) -> String {
     s.push_str("websocket_login");
     mac.update(&s.into_bytes());
     hex::encode(mac.finalize().into_bytes())
-}
-
-/// Returns a message signature for the provided payload to enable authenticated GET/POST requests to FTX.
-fn build_signature(
-    api_secret: &str,
-    time_stamp: &str,
-    http_cmd: &str,
-    uri: &str,
-    data: Option<&str>,
-) -> String {
-    const S_SIZE: usize = 256;
-    let mut mac = Hmac::<Sha256>::new_from_slice(api_secret.as_bytes()).unwrap();
-    let mut s = String::with_capacity(S_SIZE); // big enough to avoid a realloc on the subsequent push_str's
-    s.push_str(time_stamp);
-    s.push_str(http_cmd);
-    s.push_str(uri);
-    if data.is_some() {
-        s.push_str(data.unwrap())
-    };
-    if cfg!(debug_assertions) {
-        if s.len() > S_SIZE {
-            warn!(
-                "build_signature() string buffer too small ({:?} vs {:?})",
-                s.len(),
-                S_SIZE
-            )
-        };
-    }
-    mac.update(&s.into_bytes());
-    hex::encode(mac.finalize().into_bytes())
-}
-
-/// Returns the current time as an Unix EPOX timestamp in milliseconds and as a string.
-fn get_timestamp() -> (u128, String) {
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-
-    (ts, ts.to_string())
 }
 
 async fn start_websocket(ws_url: &str) -> (WsWriter, WsReader) {
@@ -462,8 +118,8 @@ async fn start_websocket(ws_url: &str) -> (WsWriter, WsReader) {
 async fn authenticate(
     ws_controller: &Arc<Mutex<WebSocketController>>,
     writer: &mut WsWriter,
-    api_key : &str,
-    api_secret : &str
+    api_key: &str,
+    api_secret: &str,
 ) -> Result<(), ()> {
     ws_controller
         .lock()
@@ -490,8 +146,8 @@ async fn ftx_data_worker(
     broadcast_channel: broadcast::Sender<UpdateMessage>,
     ws_controller: Arc<Mutex<WebSocketController>>,
     ws_url: &str,
-    api_key : &str,
-    api_secret : &str
+    api_key: &str,
+    api_secret: &str,
 ) {
     info!("Ftx data worker started.");
     let mut ping_interval = time::interval(time::Duration::from_secs(15));
@@ -502,7 +158,10 @@ async fn ftx_data_worker(
         if init_websocket {
             info!("Reinitializing web socket");
             (ws_writer, ws_reader) = start_websocket(ws_url).await;
-            if authenticate(&ws_controller, &mut ws_writer, api_key, api_secret).await.is_ok() {
+            if authenticate(&ws_controller, &mut ws_writer, api_key, api_secret)
+                .await
+                .is_ok()
+            {
                 ws_controller.lock().await.resubscribe(&mut ws_writer).await;
                 init_websocket = false;
             }
@@ -585,190 +244,6 @@ async fn ftx_data_worker(
         }
     }
     info!("Ftx data worker terminated.");
-}
-
-pub struct RestApi {
-    client: reqwest::Client,
-    api_key: String,
-    api_secret : String
-}
-
-impl RestApi {
-    pub fn new(api_key : &str, api_secret : &str) -> RestApi {
-        Self {
-            client: reqwest::Client::builder()
-                .tcp_nodelay(true)
-                .build()
-                .unwrap(),
-            api_key: String::from(api_key),
-            api_secret: String::from(api_secret)
-        }
-    }
-
-    /// Build and send a FTX GET request and returns a future for the response.
-    fn send_get_request(
-        &self,
-        target_url: &str,
-        endpoint: &str,
-    ) -> impl std::future::Future<Output = Result<Response, reqwest::Error>> {
-        let (_, ts) = get_timestamp();
-        let signature = build_signature(&self.api_secret, &ts, "GET", endpoint, None);
-        self.client
-            .get(target_url)
-            .header("FTX-KEY", &self.api_key)
-            .header("FTX-SIGN", signature)
-            .header("FTX-TS", ts)
-            .send()
-    }
-
-    /// Returns all positions in futures contracts in the account wallet.
-    pub async fn get_account_info(&self) -> Result<AccountInfo, ()> {
-        let res = self
-            .send_get_request(URL_GET_ACCOUNT_INFO, URI_GET_ACCOUNT_INFO)
-            .await;
-
-        let mut result: Result<AccountInfo, ()> = Err(());
-        if let Ok(r) = res {
-            let msg = r.text().await.unwrap();
-            let msg: AccountInfoResponse = serde_json::from_str(&msg[..]).unwrap();
-            result = msg.result.ok_or(());
-            if !msg.success {
-                warn!("get_account_info: {}", msg.error.unwrap())
-            }
-        }
-        result
-    }
-
-    /// Returns all balances in the account wallet.
-    pub async fn get_wallet(&self) -> Result<WalletBalances, ()> {
-        let res = self.send_get_request(URL_GET_WALLET, URI_GET_WALLET).await;
-
-        if let Ok(r) = res {
-            let msg = r.text().await.unwrap();
-            let msg = serde_json::from_str(&msg[..]).unwrap();
-            return Ok(msg);
-        }
-        Err(())
-    }
-
-    /// Returns a list of all markets on the exchange.
-    pub async fn get_markets(&self) -> Result<Vec<FtxMarket>, ()> {
-        let res = self.send_get_request(URL_MARKETS, URI_MARKETS).await;
-
-        if let Ok(r) = res {
-            let msg = r.text().await.unwrap();
-            let msg: RestResponseMarketList = serde_json::from_str(&msg[..]).unwrap();
-            if msg.success {
-                return Ok(msg.result);
-            }
-        }
-        Err(())
-    }
-    /// Returns the list of active orders on the exchange for the current account.
-    pub async fn get_orders(&self) -> Result<RestResponseOrderList, ()> {
-        let res = self.send_get_request(URL_ORDERS, URI_ORDERS).await;
-
-        if let Ok(r) = res {
-            let msg = r.text().await.unwrap();
-            let msg: RestResponseOrderList = serde_json::from_str(&msg[..]).unwrap();
-            if msg.success {
-                return Ok(msg);
-            }
-        }
-        Err(())
-    }
-
-    pub async fn limit_order(
-        &self,
-        market: &str,
-        side: &str,
-        price: FtxPrice,
-        order_type: &str,
-        size: FtxSize,
-        reduce_only: bool,
-        ioc: bool,
-        post_only: bool,
-        client_id: Option<&str>,
-    ) -> Result<FtxOrderId, String> {
-        let body = PlaceOrder {
-            market,
-            side,
-            price: price.floor(),
-            order_type,
-            size,
-            reduce_only,
-            ioc,
-            post_only,
-            client_id,
-        };
-        let endpoint = URI_ORDERS;
-        let target_url = URL_ORDERS;
-        let payload = serde_json::to_string(&body).unwrap();
-        let (_, ts) = get_timestamp();
-        let signature = build_signature(&self.api_key, &ts, "POST", endpoint, Some(&payload));
-
-        let res = self
-            .client
-            .post(target_url)
-            .header("FTX-KEY", &self.api_key)
-            .header("FTX-SIGN", signature)
-            .header("FTX-TS", ts)
-            .body(payload)
-            .send()
-            .await;
-        if let Ok(r) = res {
-            let msg = r.text().await.unwrap();
-            let msg: Result<PlaceOrderResponse, _> = serde_json::from_str(&msg[..]);
-            if let Ok(m) = msg {
-                if m.success {
-                    let id = m.result.unwrap().id;
-                    return Ok(id);
-                } else {
-                    return Err(m.error.unwrap());
-                }
-            } else {
-                return Err(String::from("Serde error"));
-            }
-        }
-        return Err(String::from("Unknown place_order error"));
-    }
-
-    pub async fn cancel_order(&self, order_id: FtxOrderId) -> Result<(), ()> {
-        let mut endpoint = String::with_capacity(URI_ORDERS.len() + 20);
-        endpoint.push_str(URI_ORDERS);
-        endpoint.push_str("/");
-        endpoint.push_str(&order_id.to_string());
-        let mut target_url = String::with_capacity(URL_ORDERS.len() + 20);
-        target_url.push_str(URL_ORDERS);
-        target_url.push_str("/");
-        target_url.push_str(&order_id.to_string());
-        let (_, ts) = get_timestamp();
-        let signature = build_signature(&self.api_secret, &ts, "DELETE", &endpoint, None);
-
-        let res = self
-            .client
-            .delete(target_url)
-            .header("FTX-KEY", &self.api_key)
-            .header("FTX-SIGN", signature)
-            .header("FTX-TS", ts)
-            .send()
-            .await;
-
-        if let Ok(r) = res {
-            let msg = r.text().await.unwrap();
-            let msg: Result<OrderResponse, _> = serde_json::from_str(&msg[..]);
-            if let Ok(m) = msg {
-                if m.success {
-                    return Ok(());
-                } else {
-                    warn!("cancel_order: {}", m.result);
-                }
-            }
-        } else {
-            error!("cancel_order error: {:?}", res);
-        }
-        return Err(());
-    }
 }
 
 struct ControllerToggle {
@@ -894,7 +369,12 @@ impl WebSocketController {
     }
 
     /// Authenticate the websocket to enable access to private channels.
-    pub async fn authenticate(&self, writer: &mut WsWriter, api_key : &str, api_secret : &str) -> Result<(), ()> {
+    pub async fn authenticate(
+        &self,
+        writer: &mut WsWriter,
+        api_key: &str,
+        api_secret: &str,
+    ) -> Result<(), ()> {
         let (ts, ts_s) = get_timestamp();
         let payload = FtxLogin {
             op: String::from("login"),
@@ -1038,13 +518,21 @@ impl FtxManager {
         let broadcast_channel = ftx_mgr.order_channel.clone();
         let controller = ftx_mgr.ws_controller.clone();
         let key = String::from(api_key);
-        let secret =   String::from(api_secret);
+        let secret = String::from(api_secret);
         tokio::spawn(async move {
-            ftx_data_worker(broadcast_channel, controller, &FTX_WEBSOCKET_URL, &key, &secret).await
+            ftx_data_worker(
+                broadcast_channel,
+                controller,
+                &FTX_WEBSOCKET_URL,
+                &key,
+                &secret,
+            )
+            .await
         });
         ftx_mgr
     }
 
+    #[allow(dead_code)]
     fn get_order_channel(&self) -> broadcast::Receiver<UpdateMessage> {
         self.order_channel.subscribe()
     }
@@ -1099,6 +587,16 @@ impl FtxManager {
 //     }
 // }
 
+/// Returns the current time as an Unix EPOX timestamp in milliseconds and as a string.
+fn get_timestamp() -> (u128, String) {
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+
+    (ts, ts.to_string())
+}
+
 mod tests {
     #[allow(unused_imports)]
     use super::*;
@@ -1106,37 +604,6 @@ mod tests {
     use tokio::time::{sleep, Duration};
     #[allow(unused_imports)]
     use tokio_test;
-
-    #[test]
-    fn test_build_signature_get() {
-        let signature = build_signature(
-            "T4lPid48QtjNxjLUFOcUZghD7CUJ7sTVsfuvQZF2",
-            "1588591511721",
-            "GET",
-            "/api/markets",
-            None,
-        );
-        assert_eq!(
-            signature,
-            "dbc62ec300b2624c580611858d94f2332ac636bb86eccfa1167a7777c496ee6f"
-        );
-    }
-
-    #[test]
-    fn test_build_signature_post() {
-        let payload = r#"{"market": "BTC-PERP", "side": "buy", "price": 8500, "size": 1, "type": "limit", "reduceOnly": false, "ioc": false, "postOnly": false, "clientId": null}"#;
-        let signature = build_signature(
-            "T4lPid48QtjNxjLUFOcUZghD7CUJ7sTVsfuvQZF2",
-            "1588591856950",
-            "POST",
-            "/api/orders",
-            Some(payload),
-        );
-        assert_eq!(
-            signature,
-            "c4fbabaf178658a59d7bbf57678d44c369382f3da29138f04cd46d3d582ba4ba"
-        );
-    }
 
     #[test]
     fn test_build_signature_ws() {

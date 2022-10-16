@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 pub type FtxOrderId = u64;
 pub type FtxPrice = f32;
 pub type FtxSize = f32;
-pub type FtxPriceLadder = Vec<(FtxPrice, FtxSize)>;
+pub type PriceLadder = Vec<(FtxPrice, FtxSize)>;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -59,7 +59,7 @@ pub struct AccountInfoResponse {
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct FtxMarket {
+pub struct Market {
     pub name: String,
     pub enabled: bool,
     pub price_increment: FtxPrice,
@@ -70,13 +70,13 @@ pub struct FtxMarket {
     pub quote_currency: Option<String>,
     pub underlying: Option<String>,
     pub restricted: bool,
-    pub future: Option<FtxFuture>,
+    pub future: Option<FutureInstrument>,
 }
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct FtxFuture {
+pub struct FutureInstrument {
     pub name: String,
     pub underlying: String,
     pub description: String,
@@ -107,7 +107,7 @@ pub struct RestResponseOrderList {
 #[serde(rename_all = "camelCase")]
 pub struct RestResponseMarketList {
     pub success: bool,
-    pub result: Vec<FtxMarket>,
+    pub result: Vec<Market>,
 }
 
 #[allow(dead_code)]
@@ -134,7 +134,7 @@ pub struct LimitOrder {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Markets {
-    pub data: FxHashMap<String, FtxMarket>,
+    pub data: FxHashMap<String, Market>,
 }
 
 #[derive(Serialize, Debug)]
@@ -233,8 +233,8 @@ pub enum FtxMessage<'a> {
 pub struct OrderBookUpdate {
     pub time: f64,
     pub checksum: u32,
-    pub bids: FtxPriceLadder,
-    pub asks: FtxPriceLadder,
+    pub bids: PriceLadder,
+    pub asks: PriceLadder,
 }
 
 #[derive(Serialize, Debug)]

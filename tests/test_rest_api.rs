@@ -9,8 +9,8 @@ fn test_get_markets() {
         .unwrap();
 
     rt.block_on(async {
-        let api_key = env::var("FTX_API_KEY").unwrap();
-        let secret = env::var("FTX_SECRET").unwrap();
+        let api_key = env::var("FTX_API_KEY").expect("Could not find FTX_API_KEY environment variable.");
+        let secret = env::var("FTX_SECRET").expect("Could not find FTX_SECRET environment variable.");
         let api = RestApi::new(&api_key, &secret);
         let o = api.get_markets().await.unwrap();
         assert!(o.len() > 0);

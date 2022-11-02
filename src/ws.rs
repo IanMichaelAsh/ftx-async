@@ -532,8 +532,10 @@ impl WebsocketManager {
         ftx_mgr
     }
 
+    /// Returns a receiver channel onto which all received messages from FTX will be transmitted. 
+    /// Note that data will only appear on the channel if there is an active message subscription (see orders_subscription(), trades_subscription(), etc. ) 
     #[allow(dead_code)]
-    fn get_order_channel(&self) -> broadcast::Receiver<UpdateMessage> {
+    pub fn get_order_channel(&self) -> broadcast::Receiver<UpdateMessage> {
         self.order_channel.subscribe()
     }
 

@@ -3,7 +3,7 @@ Unofficial Rust implementation of an asynchronous Websocket and REST client for 
 
 ![ci](https://github.com/IanMichaelAsh/ftx-async/actions/workflows/ci.yml/badge.svg)
 
->09/10/2022 - *** WARNING *** Code is currently being ported into this repository. You are welcome to use it as a reference, however you should have no expectation that it builds or runs correctly.
+>02/11/2022 - *** WARNING *** Code is currently being ported into this repository. You are welcome to use it as a reference, however you should have no expectation that it builds or runs correctly. The basic port is now complete, see the tests directly for very basic examples of utilising the websocket and REST modules.
 
 
 <h1>Running Integration Tests</h1>

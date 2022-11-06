@@ -3,8 +3,48 @@ Unofficial Rust implementation of an asynchronous Websocket and REST client for 
 
 ![ci](https://github.com/IanMichaelAsh/ftx-async/actions/workflows/ci.yml/badge.svg)
 
->02/11/2022 - *** WARNING *** Code is currently being ported into this repository. You are welcome to use it as a reference, however you should have no expectation that it builds or runs correctly. The basic port is now complete, see the tests directly for very basic examples of utilising the websocket and REST modules.
+>06/11/2022 - *** WARNING *** This code base is now available as a crate. It remains alpha.
 
+<h1>Example</h1>
+A basic ticker listener using a FTX websocket.
+Make sure you include tokio and ftx-async in your Cargo.toml:
+
+'''toml
+[dependencies]
+tokio = {version = "*"}
+ftx_async = {version = "*"}
+'''
+Then, on your main.rs:
+'''rust, no_run
+use ftx_async::ws::{UpdateMessage, WebsocketManager};
+use tokio::signal;
+
+#[tokio::main]
+async fn main() {
+    let api_key = ""; // Set a valid FTX API key!
+    let api_secret = ""; // Set a valid FTX secret key!
+
+    let ftx = WebsocketManager::new(&api_key, &api_secret, "BTC-PERP").await;
+
+    let mut listener = ftx.get_order_channel();
+    ftx.subscribe_channel_ticker(true).await;
+
+    let mut terminated = false;
+    while !terminated {
+        tokio::select! {
+            Ok(msg) = listener.recv() => {
+                if let UpdateMessage::BestPrice {market, bid, ask, bid_size : _, ask_size : _, last_trade : _}= msg {
+                    print!("\r{market}: Bid: {:.0}     -     Ask: {:.0}", bid.unwrap(), ask.unwrap());
+                }
+            }
+
+            _ = signal::ctrl_c() => {
+                terminated = true;
+            }
+        }
+    }
+}
+'''
 
 <h1>Running Integration Tests</h1>
 Integration tests use environment variables to look up credentials to use to authenticate with the FTX exchange. A read-only key should be created on FTX and its details should be set into 'FTX_API_KEY' and 'FTX_SECRET' environment variables.

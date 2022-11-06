@@ -3,7 +3,7 @@ name = "ftx_async"
 license = "Apache-2.0 license"
 description = "Unofficial Rust client for the FTX crypto exchange - Websocket and REST API"
 repository = "https://github.com/IanMichaelAsh/ftx-async"
-keywords = ["ftx, crypto"]
+keywords = ["ftx", "crypto"]
 version = "0.0.1"
 edition = "2021"
 

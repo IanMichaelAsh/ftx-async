@@ -151,7 +151,7 @@ impl RestApi {
         Err(())
     }
 
-    pub async fn limit_order(
+    pub async fn place_order(
         &self,
         market: &str,
         side: &str,
@@ -166,7 +166,7 @@ impl RestApi {
         let body = PlaceOrder {
             market,
             side,
-            price: price.floor(),
+            price: price,
             order_type,
             size,
             reduce_only,
@@ -194,13 +194,13 @@ impl RestApi {
             let msg: Result<PlaceOrderResponse, _> = serde_json::from_str(&msg[..]);
             if let Ok(m) = msg {
                 if m.success {
-                    let id = m.result.unwrap().id;
+                    let id = m.result.expect("Unable to convery FTX ID to u64").id;
                     return Ok(id);
                 } else {
-                    return Err(m.error.unwrap());
+                    return Err(m.error.unwrap_or(String::from("No FTX error msg supplied")));
                 }
             } else {
-                return Err(String::from("Serde error"));
+                return Err(String::from("Serde error unpacking place order response"));
             }
         }
         return Err(String::from("Unknown place_order error"));

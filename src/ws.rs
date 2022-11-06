@@ -459,8 +459,6 @@ impl WebSocketController {
     }
 }
 pub struct WebsocketManager {
-    // into_channel_to_websocket: mpsc::Sender<tokio_tungstenite::tungstenite::Message>,
-    market: String,
     order_channel: broadcast::Sender<UpdateMessage>,
     ws_controller: Arc<Mutex<WebSocketController>>,
     rest_api: RestApi,
@@ -507,7 +505,6 @@ impl WebsocketManager {
 
         // Create handler object for the FTX connection to return to caller,
         let ftx_mgr = Self {
-            market: String::from(ticker),
             order_channel: tx,
             ws_controller: Arc::new(Mutex::new(WebSocketController::new())),
             rest_api: RestApi::new(api_key, api_secret),
@@ -544,50 +541,6 @@ impl WebsocketManager {
         0
     }
 }
-
-// #[async_trait]
-// impl lob::LOBOrderManagement for FtxManager {
-//     async fn cancel_order(&self, order_id: lob::OrderId) -> Result<(), ()> {
-//         let order_id = order_id as FtxOrderID;
-//         self.rest_api.cancel_order(order_id).await
-//     }
-
-//     async fn limit_order(
-//         &self,
-//         side: lob::SideOfBook,
-//         price: lob::Price,
-//         size: lob::Volume,
-//         post_only: bool,
-//         immediate_or_cancel: bool,
-//     ) -> Result<lob::OrderId, FailureReason> {
-//         debug_assert!(!(post_only && immediate_or_cancel));
-//         let response = self
-//             .rest_api
-//             .limit_order(
-//                 &self.market,
-//                 if side == lob::SideOfBook::BID {
-//                     "buy"
-//                 } else {
-//                     "sell"
-//                 },
-//                 lob::from_price(price),
-//                 "limit",
-//                 size,
-//                 false,
-//                 immediate_or_cancel,
-//                 post_only,
-//                 None,
-//             )
-//             .await;
-//         response.map(|i| i.try_into().unwrap()).map_err(|e| {
-//             if e == "Not enough balances" {
-//                 FailureReason::InsufficientFunds
-//             } else {
-//                 FailureReason::NetworkError
-//             }
-//         })
-//     }
-// }
 
 /// Returns the current time as an Unix EPOX timestamp in milliseconds and as a string.
 fn get_timestamp() -> (u128, String) {

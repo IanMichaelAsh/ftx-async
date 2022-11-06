@@ -6,6 +6,8 @@ pub type FtxPrice = f32;
 pub type FtxSize = f32;
 pub type PriceLadder = Vec<(FtxPrice, FtxSize)>;
 
+
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct FuturePosition {

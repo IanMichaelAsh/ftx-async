@@ -4,7 +4,7 @@ use futures_util::{
 };
 use hmac::{Hmac, Mac};
 use num_traits::Zero;
-use serde::{Serialize};
+use serde::Serialize;
 use sha2::Sha256;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -14,14 +14,11 @@ use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use tracing::{error, info, warn};
 
 use crate::interface::{
-    FtxLogin, FtxLoginSignature, FtxMessage, FtxOrderId, FtxPrice, FtxSize, OrderBookUpdate,
-    PartialData, UpdateData,
+    FtxLogin, FtxLoginSignature, FtxMessage, PartialData, UpdateData, OrderBookUpdate, FtxSize, FtxOrderId, FtxPrice 
 };
 use crate::rest::RestApi;
 
-const FTX_WEBSOCKET_URL: &str = "wss://ftx.com/ws/";
 
-const PING_MSG: &str = r#"{"op":"ping"}"#;
 
 type WsWriter = SplitSink<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
@@ -31,6 +28,11 @@ type WsWriter = SplitSink<
 type WsReader = SplitStream<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
 >;
+
+const FTX_WEBSOCKET_URL: &str = "wss://ftx.com/ws/";
+const PING_MSG: &str = r#"{"op":"ping"}"#;
+const CMD_SUBSCRIBE: &str = "subscribe";
+const CMD_UNSUBSCRIBE: &str = "unsubscribe";
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum SideOfBook {
@@ -73,17 +75,6 @@ pub enum FailureReason {
     OrderCancelled,
 }
 
-// fn to_lob_update(prices: &FtxPriceLadder) -> lob::OrderBookUpdates {
-//     let mut updates = lob::OrderBookUpdates::with_capacity(prices.len());
-//     for p in prices.iter() {
-//         updates.push((lob::to_price(p.0), p.1))
-//     }
-//     updates
-// }
-
-const CMD_SUBSCRIBE: &str = "subscribe";
-const CMD_UNSUBSCRIBE: &str = "unsubscribe";
-
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct SubscriptionMgmt<'a> {
@@ -91,12 +82,6 @@ struct SubscriptionMgmt<'a> {
     market: &'a str,
     op: &'a str,
 }
-
-// impl AccountInfo {
-//     pub fn get_position_by_name(&self, future_name: &str) -> Option<&FuturePosition> {
-//         self.positions.iter().find(|&x| x.future == future_name)
-//     }
-// }
 
 /// Returns a signature for the authentication payload to enable private websocket channels.
 fn build_ws_signature(timestamp: &str, api_secret: &str) -> String {
@@ -529,8 +514,8 @@ impl WebsocketManager {
         ftx_mgr
     }
 
-    /// Returns a receiver channel onto which all received messages from FTX will be transmitted. 
-    /// Note that data will only appear on the channel if there is an active message subscription (see orders_subscription(), trades_subscription(), etc. ) 
+    /// Returns a receiver channel onto which all received messages from FTX will be transmitted.
+    /// Note that data will only appear on the channel if there is an active message subscription (see orders_subscription(), trades_subscription(), etc. )
     #[allow(dead_code)]
     pub fn get_order_channel(&self) -> broadcast::Receiver<UpdateMessage> {
         self.order_channel.subscribe()

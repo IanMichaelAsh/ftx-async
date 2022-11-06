@@ -24,7 +24,7 @@ async fn main() {
     let api_key = ""; // Set a valid FTX API key!
     let api_secret = ""; // Set a valid FTX secret key!
 
-    let ftx = WebsocketManager::new(&api_key, &api_secret, "BTC-PERP").await;
+    let ftx = WebsocketManager::new(api_key, api_secret, "BTC-PERP").await;
 
     let mut listener = ftx.get_order_channel();
     ftx.subscribe_channel_ticker(true).await;

@@ -9,13 +9,13 @@ Unofficial Rust implementation of an asynchronous Websocket and REST client for 
 A basic ticker listener using a FTX websocket.
 Make sure you include tokio and ftx-async in your Cargo.toml:
 
-'''toml
+```toml
 [dependencies]
 tokio = {version = "*"}
 ftx_async = {version = "*"}
-'''
+```
 Then, on your main.rs:
-'''rust, no_run
+```rust, no_run
 use ftx_async::ws::{UpdateMessage, WebsocketManager};
 use tokio::signal;
 
@@ -44,7 +44,7 @@ async fn main() {
         }
     }
 }
-'''
+```
 
 <h1>Running Integration Tests</h1>
 Integration tests use environment variables to look up credentials to use to authenticate with the FTX exchange. A read-only key should be created on FTX and its details should be set into 'FTX_API_KEY' and 'FTX_SECRET' environment variables.

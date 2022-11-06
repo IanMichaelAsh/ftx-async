@@ -47,5 +47,5 @@ async fn main() {
 ```
 
 <h1>Running Integration Tests</h1>
-Integration tests use environment variables to look up credentials to use to authenticate with the FTX exchange. A read-only key should be created on FTX and its details should be set into 'FTX_API_KEY' and 'FTX_SECRET' environment variables.
+The crate integration tests use an environment variables to look up credentials in order to establish a connection with the FTX exchange. A read-only key should be created on FTX and its details should be set into 'FTX_API_KEY' and 'FTX_SECRET' environment variables on the machine that will run the tests.
 

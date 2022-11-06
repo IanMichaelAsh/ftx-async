@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 use const_format::concatcp;
 use hmac::{Hmac, Mac};
 use reqwest::Response;
@@ -60,6 +61,18 @@ fn build_signature(
     hex::encode(mac.finalize().into_bytes())
 }
 
+/// An asynchronouse client to make REST API requests to FTX.
+/// 
+/// Example
+/// Initialise the REST client and retrieve the list of available markets.
+/// ```rust
+/// #[tokio::main]
+/// async fn main() {
+///     let api_key = ""; // A valid api key for a FTX account
+///     let api_secret = ""; // The secret corresponding to the provided API key
+///     let client = ftx_async::rest::RestApi::new(api_key, api_secret);
+///     let markets = client.get_markets().await.unwrap();
+/// }
 pub struct RestApi {
     client: reqwest::Client,
     api_key: String,
@@ -67,6 +80,7 @@ pub struct RestApi {
 }
 
 impl RestApi {
+    /// Construct a new RestApi. 
     pub fn new(api_key: &str, api_secret: &str) -> RestApi {
         Self {
             client: reqwest::Client::builder()
@@ -151,6 +165,17 @@ impl RestApi {
         Err(())
     }
 
+    /// Submit an order to the ['Place Order'](https://docs.ftx.com/reference/place-order) endpoint.  
+    ///
+    /// * 'market' - Market to trade. e.g. BTC-PERP
+    /// * 'side' - "buy" or "sell" 
+    /// * 'price' - Order price; Ignored for  market orders 
+    /// * 'order_type' - "limit" or "market" 
+    /// * 'size' - Order size
+    /// * 'reduce_only' - Only place order if it will reduce current position size 
+    /// * 'ioc' - Immediate-or-cancel 
+    /// * 'post_only' - Only place order if it will enter the orderbook (maker only) 
+    /// * 'client_id' - (Optional) Client-assigned order iD; Max length 64 characters; must be unique on a per subaccount basis
     pub async fn place_order(
         &self,
         market: &str,
@@ -166,7 +191,7 @@ impl RestApi {
         let body = PlaceOrder {
             market,
             side,
-            price: price,
+            price: if order_type == "market" { None } else { Some(price) },
             order_type,
             size,
             reduce_only,
@@ -206,6 +231,7 @@ impl RestApi {
         return Err(String::from("Unknown place_order error"));
     }
 
+    /// Submit an order to the ['Cancel Order'](https://docs.ftx.com/reference/cancel-order) endpoint.  
     pub async fn cancel_order(&self, order_id: FtxOrderId) -> Result<(), ()> {
         let mut endpoint = String::with_capacity(URI_ORDERS.len() + 20);
         endpoint.push_str(URI_ORDERS);

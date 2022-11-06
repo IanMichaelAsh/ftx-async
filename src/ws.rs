@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -34,12 +36,16 @@ const PING_MSG: &str = r#"{"op":"ping"}"#;
 const CMD_SUBSCRIBE: &str = "subscribe";
 const CMD_UNSUBSCRIBE: &str = "unsubscribe";
 
+/// Indicate whether operation will target the buy (bid) or sell (offer) side of the order book.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum SideOfBook {
+    /// Buy / bid
     BUY = 0,
+    /// Sell / offer
     SELL = 1,
 }
 
+/// Format for messages received on a channel obtained from calling ['WebsocketManager::get_order_channel()']. 
 #[derive(Debug, Clone)]
 pub enum UpdateMessage {
     OrderbookSnapshot(OrderBookUpdate),
@@ -69,10 +75,14 @@ pub enum UpdateMessage {
     },
 }
 
+/// Failure reasons
 #[derive(Debug, Clone)]
 pub enum FailureReason {
+    /// A network error occurred between the client and the exchange.
     NetworkError,
+    /// The account/sub-account has insufficient funds for the requested operation.
     InsufficientFunds,
+    /// The exchange cancelled the order.
     OrderCancelled,
 }
 
@@ -494,10 +504,12 @@ impl WebsocketManager {
         }
     }
 
+    /// Notify the web socket manager to gracefully terminate the connection and release all resources.
     pub async fn terminate(&self) {
         self.ws_controller.lock().await.should_terminate = true;
     }
 
+    /// Construct a new WebsocketManager
     pub async fn new(api_key: &str, api_secret: &str, ticker: &str) -> Self {
         // Create the broadcast channel for sending updates to interested workers.
         let (tx, mut _rx) = broadcast::channel::<UpdateMessage>(512);
@@ -529,7 +541,8 @@ impl WebsocketManager {
     }
 
     /// Returns a receiver channel onto which all received messages from FTX will be transmitted.
-    /// Note that data will only appear on the channel if there is an active message subscription (see orders_subscription(), trades_subscription(), etc. )
+    /// The channel will receive ['UpdateMessage'] messages when data is received on the websocket.
+    /// A subscription to one of more FTX channels must be in place before messages will be received.
     #[allow(dead_code)]
     pub fn get_order_channel(&self) -> broadcast::Receiver<UpdateMessage> {
         self.order_channel.subscribe()

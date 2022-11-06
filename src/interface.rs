@@ -242,7 +242,7 @@ pub struct OrderBookUpdate {
 pub struct PlaceOrder<'a> {
     pub market: &'a str,
     pub side: &'a str,
-    pub price: FtxPrice,
+    pub price: Option<FtxPrice>,
     #[serde(rename = "type")]
     pub order_type: &'a str,
     pub size: FtxSize,

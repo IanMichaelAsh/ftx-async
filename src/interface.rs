@@ -154,9 +154,6 @@ pub struct FtxLogin {
     pub op: String,
 }
 
-
-
-
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 #[serde(tag = "channel", content = "data")]
@@ -215,6 +212,7 @@ pub enum FtxMessage<'a> {
         #[serde(flatten)]
         #[serde(borrow)]
         data: UpdateData<'a>,
+        market : String
     },
     Error {
         code: i32,

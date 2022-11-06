@@ -54,6 +54,7 @@ pub enum UpdateMessage {
         side: SideOfBook,
     },
     BestPrice {
+        market : String,
         bid: Option<FtxPrice>,
         ask: Option<FtxPrice>,
         bid_size: FtxSize,
@@ -177,13 +178,14 @@ async fn ftx_data_worker(
                                 }
                                 PartialData::Markets(_) => {}
                             },
-                            FtxMessage::Update { data } => match data {
+                            FtxMessage::Update { market, data } => match data {
                                 UpdateData::Orderbook(o) => {
                                     let payload = UpdateMessage::OrderbookSnapshot(o);
                                     send_lob_update(&broadcast_channel, payload);
                                 }
                                 UpdateData::Ticker(t) => {
                                     let payload = UpdateMessage::BestPrice {
+                                        market,
                                         bid: t.bid,
                                         ask: t.ask,
                                         bid_size: t.bid_size,
@@ -455,8 +457,8 @@ impl WebsocketManager {
         &self.rest_api
     }
 
-    /// Enable receipt of the private orders channel.
-    pub async fn orders_subscription(&self, enable: bool) {
+    /// Subscribe to the private Orders channel.
+    pub async fn subscribe_channel_orders(&self, enable: bool) {
         if enable {
             self.ws_controller.lock().await.channel_orders.enable();
         } else {
@@ -464,7 +466,18 @@ impl WebsocketManager {
         }
     }
 
-    pub async fn ticker_subscription(&self, enable: bool) {
+    /// Subscribed to the public Orderbook channel
+    pub async fn subscribe_channel_orderbook(&self, enable: bool) {
+        if enable {
+            self.ws_controller.lock().await.channel_orderbook.enable();
+        } else {
+            self.ws_controller.lock().await.channel_orderbook.disable();
+        }
+    }
+
+
+    /// Subscribed to the public Ticker channel
+    pub async fn subscribe_channel_ticker(&self, enable: bool) {
         if enable {
             self.ws_controller.lock().await.channel_ticker.enable();
         } else {
@@ -472,7 +485,8 @@ impl WebsocketManager {
         }
     }
 
-    pub async fn trades_subscription(&self, enable: bool) {
+    /// Subscribe to the public Trades channel
+    pub async fn subscribe_channel_trades(&self, enable: bool) {
         if enable {
             self.ws_controller.lock().await.channel_trades.enable();
         } else {

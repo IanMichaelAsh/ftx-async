@@ -1,6 +1,6 @@
 [package]
 name = "ftx_async"
-license = "Apache-2.0 license"
+license = "Apache-2.0"
 description = "Unofficial Rust client for the FTX crypto exchange - Websocket and REST API"
 repository = "https://github.com/IanMichaelAsh/ftx-async"
 keywords = ["ftx", "crypto"]

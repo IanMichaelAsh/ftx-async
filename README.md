@@ -33,7 +33,7 @@ async fn main() {
     while !terminated {
         tokio::select! {
             Ok(msg) = listener.recv() => {
-                if let UpdateMessage::BestPrice {market, bid, ask, bid_size : _, ask_size : _, last_trade : _}= msg {
+                if let UpdateMessage::Ticker {market, bid, ask, bid_size : _, ask_size : _, last_trade : _}= msg {
                     print!("\r{market}: Bid: {:.0}     -     Ask: {:.0}", bid.unwrap(), ask.unwrap());
                 }
             }

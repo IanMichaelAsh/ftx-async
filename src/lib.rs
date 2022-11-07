@@ -12,9 +12,10 @@ pub mod rest;
 ///
 /// The websocket manager provides complete management of the websocket, including authentication, reconnection and keep-alives.
 /// 
-/// The module makes uses of ['tokio-tungstenite'](https://docs.rs/tokio-tungstenite/latest/tokio_tungstenite/) for low-level management of the websocket and ['serde'](https://serde.rs/) for marshalling data in and out of the socket.
+/// The module depends on ['tokio-tungstenite'](https://docs.rs/tokio-tungstenite/latest/tokio_tungstenite/) for low-level management of the websocket and ['serde'](https://serde.rs/) for marshalling data in and out of the socket.
 pub mod ws;
 
+/// Integration tests and test helper functions.
 pub mod tests {
     use std::env;
 

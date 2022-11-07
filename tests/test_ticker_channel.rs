@@ -28,7 +28,7 @@ fn test_ticker_channel() {
                 panic!("Timeout - no response from FTX. ");
             }
             Ok(msg) = listener.recv() => {
-                if let UpdateMessage::BestPrice {market, bid, ask, bid_size : _, ask_size : _, last_trade : _}= msg {
+                if let UpdateMessage::Ticker {market, bid, ask, bid_size : _, ask_size : _, last_trade : _}= msg {
                     assert_eq!(market, TEST_MARKET);
                     assert!(bid.is_some());
                     assert!(ask.is_some());

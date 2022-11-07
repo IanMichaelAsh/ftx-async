@@ -48,29 +48,50 @@ pub enum SideOfBook {
 /// Format for messages received on a channel obtained from calling ['WebsocketManager::get_order_channel()']. 
 #[derive(Debug, Clone)]
 pub enum UpdateMessage {
+    /// Delivers the initial orderbook containing the top 100 levels on either side.
     OrderbookSnapshot(OrderBookUpdate),
+    /// Delivers an incremental update of the orderbook.
     OrderbookUpdate(OrderBookUpdate),
+    /// Notifies that the given order was filled by the given amount.
     OrderFilled {
+        /// The ID of the order that filled.
         id: FtxOrderId,
+        /// Whether the order was a buy or sell
         side: SideOfBook,
+        /// The size of the fill. 
         fill_size: FtxSize,
     },
+    /// Notifies that the given order was cancelled.
     OrderCancelled {
+        /// The ID of the order that filled.
         id: FtxOrderId,
+        /// Whether the order was a buy or sell
         side: SideOfBook,
     },
-    BestPrice {
+    /// Provides the latest best bid and offer market data.
+    Ticker {
+        /// The market from which that data was received.
         market : String,
+        /// Best bid (buy) price, if it exists.
         bid: Option<FtxPrice>,
+        /// Best ask (sell) price, if it exists.
         ask: Option<FtxPrice>,
+        /// Size lying at the best bid 
         bid_size: FtxSize,
+        /// Size lying at the best ask 
         ask_size: FtxSize,
+        /// Price of last trade, if it exists. 
         last_trade: Option<FtxPrice>,
     },
+    /// *** NOT IMPLEMENTED *** Provides data on all trades in the market.
     Trade {
+        /// The price at which the trade filled.
         price: FtxPrice,
+        /// The size of the trade.
         size: FtxSize,
+        /// Timestamp of the trade
         timestamp: i64,
+        /// Whether the order was a buy or sell
         side: SideOfBook,
     },
 }
@@ -194,7 +215,7 @@ async fn ftx_data_worker(
                                     send_lob_update(&broadcast_channel, payload);
                                 }
                                 UpdateData::Ticker(t) => {
-                                    let payload = UpdateMessage::BestPrice {
+                                    let payload = UpdateMessage::Ticker {
                                         market,
                                         bid: t.bid,
                                         ask: t.ask,
@@ -455,6 +476,7 @@ impl WebSocketController {
             .await
     }
 }
+/// Manages the FTX websocket including authentication, keep-alives and reconnections.
 pub struct WebsocketManager {
     order_channel: broadcast::Sender<UpdateMessage>,
     ws_controller: Arc<Mutex<WebSocketController>>,

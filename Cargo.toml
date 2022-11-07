@@ -1,5 +1,5 @@
 [package]
-name = "ftx-async"
+name = "ftx_async"
 license = "Apache-2.0"
 description = "Unofficial asynchronous Rust library for the FTX crypto exchange Websocket and REST API. The websocket interface fully abstracts the connection to FTX by publishing messages onto a MPSC channel and managing authentication, reconnections and keep-alives in the background."
 repository = "https://github.com/IanMichaelAsh/ftx-async"

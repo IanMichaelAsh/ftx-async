@@ -7,8 +7,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{error, warn};
 
 use crate::interface::{
-    AccountInfo, AccountInfoResponse, Market, FtxId, FtxPrice, FtxSize, OrderResponse,
-    PlaceOrder, PlaceOrderResponse, RestResponseMarketList, RestResponseOrderList, WalletBalances
+    AccountInfo, AccountInfoResponse, FtxId, FtxPrice, FtxSize, Market, OrderResponse, PlaceOrder,
+    PlaceOrderResponse, RestResponseMarketList, RestResponseOrderList, WalletBalances,
 };
 
 const FTX_REST_URL: &str = "https://ftx.com";
@@ -62,7 +62,7 @@ fn build_signature(
 }
 
 /// An asynchronouse client to make REST API requests to FTX.
-/// 
+///
 /// Example
 /// Initialise the REST client and retrieve the list of available markets.
 /// ```rust
@@ -80,7 +80,7 @@ pub struct RestApi {
 }
 
 impl RestApi {
-    /// Construct a new RestApi. 
+    /// Construct a new RestApi.
     pub fn new(api_key: &str, api_secret: &str) -> RestApi {
         Self {
             client: reqwest::Client::builder()
@@ -168,13 +168,13 @@ impl RestApi {
     /// Submit an order to the ['Place Order'](https://docs.ftx.com/reference/place-order) endpoint.  
     ///
     /// * 'market' - Market to trade. e.g. BTC-PERP
-    /// * 'side' - "buy" or "sell" 
-    /// * 'price' - Order price; Ignored for  market orders 
-    /// * 'order_type' - "limit" or "market" 
+    /// * 'side' - "buy" or "sell"
+    /// * 'price' - Order price; Ignored for  market orders
+    /// * 'order_type' - "limit" or "market"
     /// * 'size' - Order size
-    /// * 'reduce_only' - Only place order if it will reduce current position size 
-    /// * 'ioc' - Immediate-or-cancel 
-    /// * 'post_only' - Only place order if it will enter the orderbook (maker only) 
+    /// * 'reduce_only' - Only place order if it will reduce current position size
+    /// * 'ioc' - Immediate-or-cancel
+    /// * 'post_only' - Only place order if it will enter the orderbook (maker only)
     /// * 'client_id' - (Optional) Client-assigned order iD; Max length 64 characters; must be unique on a per subaccount basis
     pub async fn place_order(
         &self,
@@ -191,7 +191,11 @@ impl RestApi {
         let body = PlaceOrder {
             market,
             side,
-            price: if order_type == "market" { None } else { Some(price) },
+            price: if order_type == "market" {
+                None
+            } else {
+                Some(price)
+            },
             order_type,
             size,
             reduce_only,

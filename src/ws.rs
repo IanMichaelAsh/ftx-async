@@ -16,11 +16,10 @@ use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use tracing::{error, info, warn};
 
 use crate::interface::{
-    FtxLogin, FtxLoginSignature, FtxMessage, PartialData, UpdateData, OrderBookUpdate, FtxSize, FtxId, FtxPrice 
+    FtxId, FtxLogin, FtxLoginSignature, FtxMessage, FtxPrice, FtxSize, OrderBookUpdate,
+    PartialData, UpdateData,
 };
 use crate::rest::RestApi;
-
-
 
 type WsWriter = SplitSink<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
@@ -45,7 +44,7 @@ pub enum SideOfBook {
     SELL = 1,
 }
 
-/// Format for messages received on a channel obtained from calling ['WebsocketManager::get_order_channel()']. 
+/// Format for messages received on a channel obtained from calling ['WebsocketManager::get_order_channel()'].
 #[derive(Debug, Clone)]
 pub enum UpdateMessage {
     /// Delivers the initial orderbook containing the top 100 levels on either side.
@@ -58,7 +57,7 @@ pub enum UpdateMessage {
         id: FtxId,
         /// Whether the order was a buy or sell
         side: SideOfBook,
-        /// The size of the fill. 
+        /// The size of the fill.
         fill_size: FtxSize,
     },
     /// Notifies that the given order was cancelled.
@@ -71,22 +70,22 @@ pub enum UpdateMessage {
     /// Provides the latest best bid and offer market data.
     Ticker {
         /// The market from which that data was received.
-        market : String,
+        market: String,
         /// Best bid (buy) price, if it exists.
         bid: Option<FtxPrice>,
         /// Best ask (sell) price, if it exists.
         ask: Option<FtxPrice>,
-        /// Size lying at the best bid 
+        /// Size lying at the best bid
         bid_size: FtxSize,
-        /// Size lying at the best ask 
+        /// Size lying at the best ask
         ask_size: FtxSize,
-        /// Price of last trade, if it exists. 
+        /// Price of last trade, if it exists.
         last_trade: Option<FtxPrice>,
     },
     /// Provides data on all trades in the market.
     Trade {
         /// The market from which that data was received.
-        market : String,
+        market: String,
         /// The ID of the trade that filled
         id: FtxId,
         /// The price at which the trade filled.
@@ -96,7 +95,7 @@ pub enum UpdateMessage {
         /// Time  of the trade
         time: String,
         /// True of the trade involved a liquidation order, else false
-        liquidation : bool,
+        liquidation: bool,
         /// Whether the order was a buy or sell
         side: SideOfBook,
     },
@@ -242,8 +241,7 @@ async fn ftx_data_worker(
                                             liquidation: t.liquidation,
                                             side: if t.side == "buy" {SideOfBook::BUY} else {SideOfBook::SELL}
                                         };
-                                    send_lob_update(&broadcast_channel, payload);
-
+                                        send_lob_update(&broadcast_channel, payload);
                                     }
                                 }
                                 UpdateData::Orders(o) => {
@@ -527,7 +525,6 @@ impl WebsocketManager {
         }
     }
 
-
     /// Subscribed to the public Ticker channel
     pub async fn subscribe_channel_ticker(&self, enable: bool) {
         if enable {
@@ -625,31 +622,4 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_get_markets() {
-    //     let f = RestApi::new();
-    //     let s = tokio_test::block_on(f.get_markets());
-    //     if let Ok(m) = s {
-    //         assert!(m.len() > 0);
-    //     }
-    // }
-
-    // #[test]
-    // fn test_cancel_order() {
-    //     let f = RestApi::new();
-
-    //     let rt = tokio::runtime::Builder::new_multi_thread()
-    //     .enable_all()
-    //     .build()
-    //     .unwrap();
-
-    //     rt.block_on(async {
-
-    //         let s = f.limit_order("BTC-PERP", "buy", 20300.0, "limit", 0.0001, false, false, false, None).await;
-    //         let id = s.unwrap();
-    //         sleep(Duration::from_secs(10)).await;
-    //         let s = f.cancel_order(id).await;
-    //         println!("{:?}", s);
-    //     })
-    // }
 }

@@ -6,8 +6,6 @@ pub type FtxPrice = f32;
 pub type FtxSize = f32;
 pub type PriceLadder = Vec<(FtxPrice, FtxSize)>;
 
-
-
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct FuturePosition {
@@ -27,7 +25,6 @@ pub struct FuturePosition {
     /// Absolute value of net_size
     pub size: FtxPrice,
 }
-
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -212,7 +209,7 @@ pub enum FtxMessage<'a> {
         #[serde(flatten)]
         #[serde(borrow)]
         data: UpdateData<'a>,
-        market : String
+        market: String,
     },
     Error {
         code: i32,
@@ -227,7 +224,6 @@ pub enum FtxMessage<'a> {
         market: String,
     },
 }
-
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct OrderBookUpdate {
@@ -285,7 +281,6 @@ pub struct OrderStatus {
     pub client_id: Option<String>,
 }
 
-
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaceOrderResponse {
@@ -301,4 +296,3 @@ pub struct OrderResponse {
     pub success: bool,
     pub result: String,
 }
-

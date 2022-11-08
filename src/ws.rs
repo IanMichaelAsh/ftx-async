@@ -44,6 +44,15 @@ pub enum SideOfBook {
     SELL = 1,
 }
 
+/// Indicates the type of order.
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum OrderType {
+    /// Limit Order
+    LIMIT,
+    /// Market order
+    MARKET
+}
+
 /// Format for messages received on a channel obtained from calling ['WebsocketManager::get_order_channel()'].
 #[derive(Debug, Clone)]
 pub enum UpdateMessage {

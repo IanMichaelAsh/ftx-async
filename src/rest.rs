@@ -11,6 +11,8 @@ use crate::interface::{
     PlaceOrderResponse, RestResponseMarketList, RestResponseOrderList, WalletBalances,
 };
 
+pub use crate::ws::{OrderType, SideOfBook};
+
 const FTX_REST_URL: &str = "https://ftx.com";
 const URI_GET_ACCOUNT_INFO: &str = "/api/account";
 const URL_GET_ACCOUNT_INFO: &str = concatcp!(FTX_REST_URL, URI_GET_ACCOUNT_INFO);
@@ -168,9 +170,9 @@ impl RestApi {
     /// Submit an order to the ['Place Order'](https://docs.ftx.com/reference/place-order) endpoint.  
     ///
     /// * 'market' - Market to trade. e.g. BTC-PERP
-    /// * 'side' - "buy" or "sell"
-    /// * 'price' - Order price; Ignored for  market orders
-    /// * 'order_type' - "limit" or "market"
+    /// * 'side' - SideOfBook::BUY or SideOfBook::SELL
+    /// * 'price' - Order price; Ignored for market orders
+    /// * 'order_type' - OrderType::MARKET or OrderType::LIMIT
     /// * 'size' - Order size
     /// * 'reduce_only' - Only place order if it will reduce current position size
     /// * 'ioc' - Immediate-or-cancel
@@ -179,9 +181,9 @@ impl RestApi {
     pub async fn place_order(
         &self,
         market: &str,
-        side: &str,
+        side: SideOfBook,
         price: FtxPrice,
-        order_type: &str,
+        order_type: OrderType,
         size: FtxSize,
         reduce_only: bool,
         ioc: bool,
@@ -190,13 +192,18 @@ impl RestApi {
     ) -> Result<FtxId, String> {
         let body = PlaceOrder {
             market,
-            side,
-            price: if order_type == "market" {
-                None
-            } else {
-                Some(price)
+            side: match side {
+                SideOfBook::BUY => "buy",
+                SideOfBook::SELL => "sell",
             },
-            order_type,
+            price: match order_type {
+                OrderType::MARKET => None,
+                OrderType::LIMIT => Some(price),
+            },
+            order_type: match order_type {
+                OrderType::MARKET => "market",
+                OrderType::LIMIT => "limit",
+            },
             size,
             reduce_only,
             ioc,
@@ -207,7 +214,7 @@ impl RestApi {
         let target_url = URL_ORDERS;
         let payload = serde_json::to_string(&body).unwrap();
         let (_, ts) = get_timestamp();
-        let signature = build_signature(&self.api_key, &ts, "POST", endpoint, Some(&payload));
+        let signature = build_signature(&self.api_secret, &ts, "POST", endpoint, Some(&payload));
 
         let res = self
             .client
@@ -223,7 +230,7 @@ impl RestApi {
             let msg: Result<PlaceOrderResponse, _> = serde_json::from_str(&msg[..]);
             if let Ok(m) = msg {
                 if m.success {
-                    let id = m.result.expect("Unable to convery FTX ID to u64").id;
+                    let id = m.result.expect("Unable to convert FTX ID to u64").id;
                     return Ok(id);
                 } else {
                     return Err(m.error.unwrap_or(String::from("No FTX error msg supplied")));

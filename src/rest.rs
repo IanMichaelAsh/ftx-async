@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{error, warn};
 
 use crate::interface::{
-    AccountInfo, AccountInfoResponse, Market, FtxOrderId, FtxPrice, FtxSize, OrderResponse,
+    AccountInfo, AccountInfoResponse, Market, FtxId, FtxPrice, FtxSize, OrderResponse,
     PlaceOrder, PlaceOrderResponse, RestResponseMarketList, RestResponseOrderList, WalletBalances
 };
 
@@ -187,7 +187,7 @@ impl RestApi {
         ioc: bool,
         post_only: bool,
         client_id: Option<&str>,
-    ) -> Result<FtxOrderId, String> {
+    ) -> Result<FtxId, String> {
         let body = PlaceOrder {
             market,
             side,
@@ -232,7 +232,7 @@ impl RestApi {
     }
 
     /// Submit an order to the ['Cancel Order'](https://docs.ftx.com/reference/cancel-order) endpoint.  
-    pub async fn cancel_order(&self, order_id: FtxOrderId) -> Result<(), ()> {
+    pub async fn cancel_order(&self, order_id: FtxId) -> Result<(), ()> {
         let mut endpoint = String::with_capacity(URI_ORDERS.len() + 20);
         endpoint.push_str(URI_ORDERS);
         endpoint.push_str("/");

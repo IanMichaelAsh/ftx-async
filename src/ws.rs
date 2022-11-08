@@ -16,7 +16,7 @@ use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use tracing::{error, info, warn};
 
 use crate::interface::{
-    FtxLogin, FtxLoginSignature, FtxMessage, PartialData, UpdateData, OrderBookUpdate, FtxSize, FtxOrderId, FtxPrice 
+    FtxLogin, FtxLoginSignature, FtxMessage, PartialData, UpdateData, OrderBookUpdate, FtxSize, FtxId, FtxPrice 
 };
 use crate::rest::RestApi;
 
@@ -55,7 +55,7 @@ pub enum UpdateMessage {
     /// Notifies that the given order was filled by the given amount.
     OrderFilled {
         /// The ID of the order that filled.
-        id: FtxOrderId,
+        id: FtxId,
         /// Whether the order was a buy or sell
         side: SideOfBook,
         /// The size of the fill. 
@@ -64,7 +64,7 @@ pub enum UpdateMessage {
     /// Notifies that the given order was cancelled.
     OrderCancelled {
         /// The ID of the order that filled.
-        id: FtxOrderId,
+        id: FtxId,
         /// Whether the order was a buy or sell
         side: SideOfBook,
     },
@@ -83,14 +83,20 @@ pub enum UpdateMessage {
         /// Price of last trade, if it exists. 
         last_trade: Option<FtxPrice>,
     },
-    /// *** NOT IMPLEMENTED *** Provides data on all trades in the market.
+    /// Provides data on all trades in the market.
     Trade {
+        /// The market from which that data was received.
+        market : String,
+        /// The ID of the trade that filled
+        id: FtxId,
         /// The price at which the trade filled.
         price: FtxPrice,
         /// The size of the trade.
         size: FtxSize,
-        /// Timestamp of the trade
-        timestamp: i64,
+        /// Time  of the trade
+        time: String,
+        /// True of the trade involved a liquidation order, else false
+        liquidation : bool,
         /// Whether the order was a buy or sell
         side: SideOfBook,
     },
@@ -225,7 +231,21 @@ async fn ftx_data_worker(
                                     };
                                     send_lob_update(&broadcast_channel, payload);
                                 }
-                                UpdateData::Trades(_t) => {}
+                                UpdateData::Trades(trades) => {
+                                    for t in trades.iter() {
+                                        let payload = UpdateMessage::Trade {
+                                            market: market.clone(),
+                                            id: t.id,
+                                            price: t.price,
+                                            size: t.size,
+                                            time: t.time.to_owned(),
+                                            liquidation: t.liquidation,
+                                            side: if t.side == "buy" {SideOfBook::BUY} else {SideOfBook::SELL}
+                                        };
+                                    send_lob_update(&broadcast_channel, payload);
+
+                                    }
+                                }
                                 UpdateData::Orders(o) => {
                                     if o.status.eq("closed") {
                                         let payload = if o.filled_size.is_zero() {

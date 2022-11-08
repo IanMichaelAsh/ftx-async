@@ -1,7 +1,7 @@
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 
-pub type FtxOrderId = u64;
+pub type FtxId = u64;
 pub type FtxPrice = f32;
 pub type FtxSize = f32;
 pub type PriceLadder = Vec<(FtxPrice, FtxSize)>;
@@ -116,7 +116,7 @@ pub struct RestResponseMarketList {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct LimitOrder {
-    pub id: u64,
+    pub id: FtxId,
     pub client_id: Option<String>,
     pub market: String,
     #[serde(rename = "type")]
@@ -176,12 +176,12 @@ pub struct Ticker {
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct Trades<'a> {
-    id: u32,
-    price: FtxPrice,
-    size: FtxSize,
-    side: &'a str,
-    liquidation: bool,
-    time: String,
+    pub id: FtxId,
+    pub price: FtxPrice,
+    pub size: FtxSize,
+    pub side: &'a str,
+    pub liquidation: bool,
+    pub time: &'a str,
 }
 
 #[derive(Deserialize, Debug)]

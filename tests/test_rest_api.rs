@@ -1,5 +1,6 @@
-use ftx_async::rest::{OrderType, RestApi, SideOfBook};
 use ftx_async::tests::get_test_credentials;
+#[allow(unused_imports)]
+use ftx_async::rest::{OrderType, RestApi, SideOfBook};
 
 #[test]
 fn test_get_markets() {

@@ -5,7 +5,7 @@ description = "Unofficial asynchronous Rust library for the FTX crypto exchange 
 repository = "https://github.com/IanMichaelAsh/ftx-async"
 documentation = "https://docs.rs/ftx_async/latest/ftx_async/"
 keywords = ["ftx", "crypto"]
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

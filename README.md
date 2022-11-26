@@ -3,8 +3,6 @@ Unofficial Rust implementation of an asynchronous Websocket and REST client for 
 
 ![ci](https://github.com/IanMichaelAsh/ftx-async/actions/workflows/ci.yml/badge.svg)
 
->06/11/2022 - *** WARNING *** This code base is alpha, though it is now available as a crate.
-
 <h1>Example</h1>
 A basic ticker listener using a FTX websocket.
 Make sure you include tokio and ftx-async in your Cargo.toml:
